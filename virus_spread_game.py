@@ -54,7 +54,7 @@ def can_virus_spread(x: int, y: int) -> bool:
     for row in matriz_botones:
                 for boton in row:
                     boton.setEnabled(False)
-    if winner() == False:
+    if winner() == True:
         msg = QMessageBox()
         msg.setWindowTitle("Winner")
         msg.setText("You win!")
@@ -138,8 +138,8 @@ def winner()->None:
     for row in matriz_botones:
         for boton in row:
             if boton.valor == 0:  
-                return False
-    return True
+                return True
+    return False
 
 def game_matrix(x:int = None, y:int= None, level:int = 1)->None:
     """
