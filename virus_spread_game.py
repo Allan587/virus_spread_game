@@ -50,25 +50,25 @@ def spread_virus(x: int, y: int) -> None:
             if matriz_botones[origin_y - 1][origin_x].valor == 0:
                 matriz_botones[origin_y - 1][origin_x].setText("🦠")
                 matriz_botones[origin_y - 1][origin_x].valor = 1
-                return
+                return True
 
         elif new_virus == 1 and origin_y < y - 1:  # Abajo
             if matriz_botones[origin_y + 1][origin_x].valor == 0:
                 matriz_botones[origin_y + 1][origin_x].setText("🦠")
                 matriz_botones[origin_y + 1][origin_x].valor = 1
-                return
+                return True
 
         elif new_virus == 2 and origin_x > 0:  # Izquierda
             if matriz_botones[origin_y][origin_x - 1].valor == 0:
                 matriz_botones[origin_y][origin_x - 1].setText("🦠")
                 matriz_botones[origin_y][origin_x - 1].valor = 1
-                return
+                return True
 
         elif new_virus == 3 and origin_x < x - 1:  # Derecha
             if matriz_botones[origin_y][origin_x + 1].valor == 0:
                 matriz_botones[origin_y][origin_x + 1].setText("🦠")
                 matriz_botones[origin_y][origin_x + 1].valor = 1
-                return
+                return True
     
 def generate_barrier(x:int, y:int)->None:
     """Function that generates a barrier in the matrix clicked by the user.
@@ -79,24 +79,39 @@ def generate_barrier(x:int, y:int)->None:
     """
     matriz_botones[y][x].setText("🧱")
     matriz_botones[y][x].valor = 2
+    
             
+def turn(x: int, y: int) -> None:
+    """Function that alternates turns between the user and the computer.
+    The user places a barrier, and the computer spreads the virus.
+
+    Args:
+        x (int): coordinate x of the button
+        y (int): coordinate y of the button
+    """
+    if matriz_botones[y][x].valor == 0:  # Ensure the user clicks on an empty cell
+        generate_barrier(x, y)  # User's turn: place a barrier
+        spread_virus(len(matriz_botones[0]), len(matriz_botones))  # Computer's turn: spread the virus
+    
 def game_matrix(x:int = None, y:int= None, level:int = 1)->None:
     """Fuction that creates the game matrix with YxX buttons.
     """
     for y in range(10):
         fila= []
+        
         for x in range(10):
-            
+
             boton = QPushButton("⬜") 
             boton.valor = 0
             boton.setFixedSize(50, 50) 
             boton.setStyleSheet("font-size: 40px; border: none; background-color: transparent;")
-            boton.clicked.connect(lambda _, px=x, py=y: generate_barrier( px, py)) 
+            boton.clicked.connect(lambda _, px=x, py=y: turn( px, py)) 
             grid_layout.addWidget(boton, x, y) 
             fila.append(boton)
         matriz_botones.append(fila)
-    generate_virus(10, 10, level)
-game_matrix()
+    generate_virus(x, y, level)
+
+game_matrix(10, 10)
 
 ventana.setLayout(grid_layout) 
 ventana.show()
