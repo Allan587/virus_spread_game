@@ -1,8 +1,8 @@
 import PyQt6
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout
 from PyQt6.QtCore import Qt
-import random
 import sys
+import random
 
 app = QApplication(sys.argv)
 ventana = QWidget()
@@ -26,8 +26,36 @@ def generate_virus(x:int = None, y:int = None, level:int = 1)->None: # x and y r
         matriz_botones[origin_y][origin_x].setText("🦠")
         matriz_botones[origin_y][origin_x].valor = 1
         cont += 1
+
+def can_virus_spread(x: int, y: int) -> bool:
+    """
+    Function to check if the virus can spread further in the matrix.
+
+    Args:
+        x (int): number of columns in the matrix
+        y (int): number of rows in the matrix
+
+    Returns:
+        bool: True if the virus can spread, False otherwise
+    """
+    for row in range(y):
+        for col in range(x):
+            if matriz_botones[row][col].valor == 1:  
+                
+                if row > 0 and matriz_botones[row - 1][col].valor == 0:  
+                    return True
+                if row < y - 1 and matriz_botones[row + 1][col].valor == 0:  
+                    return True
+                if col > 0 and matriz_botones[row][col - 1].valor == 0:
+                    return True
+                if col < x - 1 and matriz_botones[row][col + 1].valor == 0:
+                    return True
+    for row in matriz_botones:
+                for boton in row:
+                    boton.setEnabled(False)
+    return False
     
-def spread_virus(x: int, y: int) -> None:
+def spread_virus(x: int, y: int) -> None: 
     """
     Function that spreads the virus in the matrix.
     Randomly selects a position that already has a virus (valor == 1),
@@ -37,38 +65,34 @@ def spread_virus(x: int, y: int) -> None:
         x (int): number of columns in the matrix
         y (int): number of rows in the matrix
     """
-    while True:
+        
+    while can_virus_spread(x, y) == True:
         origin_x = random.randint(0, x - 1)
         origin_y = random.randint(0, y - 1)
-
         if matriz_botones[origin_y][origin_x].valor != 1:
             continue
-
+        
         new_virus = random.randint(0, 3)
-
         if new_virus == 0 and origin_y > 0:  # Arriba
             if matriz_botones[origin_y - 1][origin_x].valor == 0:
                 matriz_botones[origin_y - 1][origin_x].setText("🦠")
                 matriz_botones[origin_y - 1][origin_x].valor = 1
-                return True
-
+                return 
         elif new_virus == 1 and origin_y < y - 1:  # Abajo
             if matriz_botones[origin_y + 1][origin_x].valor == 0:
                 matriz_botones[origin_y + 1][origin_x].setText("🦠")
                 matriz_botones[origin_y + 1][origin_x].valor = 1
-                return True
-
+                return 
         elif new_virus == 2 and origin_x > 0:  # Izquierda
             if matriz_botones[origin_y][origin_x - 1].valor == 0:
                 matriz_botones[origin_y][origin_x - 1].setText("🦠")
                 matriz_botones[origin_y][origin_x - 1].valor = 1
-                return True
-
+                return 
         elif new_virus == 3 and origin_x < x - 1:  # Derecha
             if matriz_botones[origin_y][origin_x + 1].valor == 0:
                 matriz_botones[origin_y][origin_x + 1].setText("🦠")
                 matriz_botones[origin_y][origin_x + 1].valor = 1
-                return True
+                return 
     
 def generate_barrier(x:int, y:int)->None:
     """Function that generates a barrier in the matrix clicked by the user.
