@@ -1,5 +1,5 @@
-import PyQt6
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QMessageBox
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QGridLayout, QMessageBox
+from PyQt6.QtGui import QGuiApplication 
 from PyQt6.QtCore import Qt
 import sys
 import random
@@ -8,20 +8,27 @@ from collections import deque
 app = QApplication(sys.argv)
 ventana = QWidget()
 ventana.setWindowTitle("Virus Spread Game")
-ventana.setGeometry(400, 200, 500, 300)
-
+ventana.resize(500, 300)
+ventana.move(QGuiApplication.primaryScreen().availableGeometry().center() - ventana.rect().center())
 grid_layout = QGridLayout()
 matriz_botones = [] 
 
-def messages(i:int)->None:
+def messages(i: int) -> None:
     """
-    Function that shows a message depending on the value of the function called.
+    Shows a message depending on the given index:
+    0 = Win, 1 = Game Over, 2 = Invalid Move, 3 = Game Rules.
     """
-    messages = [["Winner", "You win!", QMessageBox.Icon.Information],["Game Over", "Game Over!", QMessageBox.Icon.Critical],["Invalid Move", "You cannot create an isolated island!", QMessageBox.Icon.Warning],["Game Rules", "Welcome to the Virus Spread Game!\n\n""Your goal is to place barriers to prevent the virus from spreading.\n""Click on a button to place a barrier and stop the virus.\n""If you create an isolated island, you lose!\n""Good luck!", QMessageBox.Icon.Information],]
+    msg_data = {
+        0: ("Winner", "You win!", QMessageBox.Icon.Information),
+        1: ("Game Over", "You lose!", QMessageBox.Icon.Critical),
+        2: ("Invalid Move", "You cannot create an isolated island!", QMessageBox.Icon.Warning),
+        3: ("Game Rules","Welcome to the Virus Spread Game!\n\nYour goal is to place barriers to prevent the virus from spreading.\nClick on a button to place a barrier and stop the virus.\nIf you create an isolated island, you lose your turn!\nGood luck!",QMessageBox.Icon.Information),
+    }
+    title, text, icon = msg_data.get(i, ("Error", "Unknown message", QMessageBox.Icon.Warning))
     msg = QMessageBox()
-    msg.setWindowTitle(messages[i][0])
-    msg.setText(messages[i][1])
-    msg.setIcon(messages[i][2])
+    msg.setWindowTitle(title)
+    msg.setText(text)
+    msg.setIcon(icon)
     msg.exec()
 
 def generate_virus(x:int = None, y:int = None, level:int = 1)->None: 
@@ -84,32 +91,24 @@ def spread_virus(x: int, y: int) -> None:
         y (int): number of rows in the matrix
     """  
     while can_virus_spread(x, y) == True:
-        origin_x = random.randint(0, x - 1)
-        origin_y = random.randint(0, y - 1)
+        origin_x = random.randint(0, x - 1); origin_y = random.randint(0, y - 1)
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
         if matriz_botones[origin_y][origin_x].valor != 1:
             continue
         
-        new_virus = random.randint(0, 3)
-        if new_virus == 0 and origin_y > 0:  # Up
-            if matriz_botones[origin_y - 1][origin_x].valor == 0:
-                matriz_botones[origin_y - 1][origin_x].setText("🦠")
-                matriz_botones[origin_y - 1][origin_x].valor = 1
-                return 
-        elif new_virus == 1 and origin_y < y - 1:  # Down
-            if matriz_botones[origin_y + 1][origin_x].valor == 0:
-                matriz_botones[origin_y + 1][origin_x].setText("🦠")
-                matriz_botones[origin_y + 1][origin_x].valor = 1
-                return 
-        elif new_virus == 2 and origin_x > 0:  # Left
-            if matriz_botones[origin_y][origin_x - 1].valor == 0:
-                matriz_botones[origin_y][origin_x - 1].setText("🦠")
-                matriz_botones[origin_y][origin_x - 1].valor = 1
-                return 
-        elif new_virus == 3 and origin_x < x - 1:  # Right
-            if matriz_botones[origin_y][origin_x + 1].valor == 0:
-                matriz_botones[origin_y][origin_x + 1].setText("🦠")
-                matriz_botones[origin_y][origin_x + 1].valor = 1
-                return 
+        def add_virus(x:int, y:int)->None:
+            if matriz_botones[y][x].valor == 0:
+                matriz_botones[y][x].setText("🦠")
+                matriz_botones[y][x].valor = 1
+                
+        new_virus = random.randint(0, len(directions) - 1)
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  
+        dy, dx = directions[new_virus]
+        ny, nx = origin_y + dy, origin_x + dx
+
+        if 0 <= ny < y and 0 <= nx < x and matriz_botones[ny][nx].valor == 0:
+            add_virus(nx, ny)
+            return
     
 def generate_barrier(x:int, y:int)->None:
     """
@@ -123,47 +122,47 @@ def generate_barrier(x:int, y:int)->None:
         return
     matriz_botones[y][x].setText("🧱")
     matriz_botones[y][x].valor = 2
-    
-def limit_islands(button_matrix, x, y):
-    """
-    Verifies if the barrier creates an isolated island in the matrix. Then blocks the button.
-    If it does, it shows a message and returns False.
-    """
-    rows = len(button_matrix)
-    cols = len(button_matrix[0])
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-    button_matrix[y][x].valor = 2  
+ 
 
-    def is_island(start_y, start_x):
-        visited = [[False for _ in range(cols)] for _ in range(rows)]
-        queue = deque([(start_y, start_x)])
-        visited[start_y][start_x] = True
-        has_border = False
+def limit_islands(m, x, y):
+    rows, col = len(m), len(m[0])
+    dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+    if m[y][x].valor != 0:
+        return True  
+
+    m[y][x].valor = 2
+    visited = [[False] * col for _ in range(rows)]
+
+    def bfs():
+        queue = []
+    
+        for i in range(rows):
+            for j in range(col):
+                if (i == 0 or i == rows-1 or j == 0 or j == col-1) and m[i][j].valor == 0:
+                    queue.append((i, j))
+                    visited[i][j] = True
 
         while queue:
-            cy, cx = queue.popleft()
-            for dy, dx in directions:
+            cy, cx = queue.pop(0)
+            for dy, dx in dirs:
                 ny, nx = cy + dy, cx + dx
-                if 0 <= ny < rows and 0 <= nx < cols:
-                    if not visited[ny][nx] and button_matrix[ny][nx].valor == 0:
+                if 0 <= ny < rows and 0 <= nx < col and not visited[ny][nx]:
+                    if m[ny][nx].valor == 0:  
                         visited[ny][nx] = True
                         queue.append((ny, nx))
-                else:
-                    has_border = True  
-        return not has_border  
-
-    for dy, dx in directions:
-        ny, nx = y + dy, x + dx
-        if 0 <= ny < rows and 0 <= nx < cols:
-            if button_matrix[ny][nx].valor == 0:
-                if is_island(ny, nx):
-                    button_matrix[y][x].valor = 0  
-                    messages(2)  
-                    return False
-
-    button_matrix[y][x].valor = 0  
-    return True
+                        
+    bfs()
+    for i in range(rows):
+        for j in range(col):
+            if m[i][j].valor == 0 and not visited[i][j]:
+                m[y][x].valor = 0 
+                messages(2)  
+                return False
             
+    m[y][x].valor = 0
+    return True
+
 def turn(x: int, y: int) -> None:
     """
     Function that alternates turns between the user and the computer.
@@ -205,7 +204,7 @@ def game_matrix(x:int = None, y:int= None, level:int = 1)->None:
             boton.valor = 0
             boton.setFixedSize(50, 50) 
             boton.setStyleSheet("font-size: 40px; border: none; background-color: transparent;")
-            boton.clicked.connect(lambda _, px=x, py=y: turn( px, py)) 
+            boton.clicked.connect(lambda _, px=x,py=y: turn( px, py)) 
             grid_layout.addWidget(boton, x, y) 
             fila.append(boton)
         matriz_botones.append(fila)
