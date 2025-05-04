@@ -15,8 +15,9 @@ matriz_botones = []
 
 def messages(i: int) -> None:
     """
-    Shows a message depending on the given index:
-    0 = Win, 1 = Game Over, 2 = Invalid Move, 3 = Game Rules.
+    Function that shows a message box with a title and text.
+    The message box icon is determined by the index provided for examople:
+    0 = Winner, 1 = Loser, 2 = Invalid Move, 3 = Game Rules.
     """
     msg_data = {
         0: ("Winner", "You win!", QMessageBox.Icon.Information),
@@ -97,6 +98,13 @@ def spread_virus(x: int, y: int) -> None:
             continue
         
         def add_virus(x:int, y:int)->None:
+            """
+            Function that adds a virus to the matrix at the given coordinates.
+
+            Args:
+                x (int): position of the column in the matrix
+                y (int): position of the row in the matrix
+            """
             if matriz_botones[y][x].valor == 0:
                 matriz_botones[y][x].setText("🦠")
                 matriz_botones[y][x].valor = 1
@@ -124,7 +132,18 @@ def generate_barrier(x:int, y:int)->None:
     matriz_botones[y][x].valor = 2
  
 
-def limit_islands(m, x, y):
+def limit_islands(m:list, x:int, y:int)->bool:
+    """
+    Function that checks if the user is creating an isolated island.
+
+    Args:
+        m list: matrix of buttons
+        x int: coordinate x of the button or matrix column
+        y int: coordinate y of the button or matrix row
+
+    Returns:
+       bool : True if the user is not creating an isolated island, False otherwise.
+    """
     rows, col = len(m), len(m[0])
     dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
@@ -135,6 +154,10 @@ def limit_islands(m, x, y):
     visited = [[False] * col for _ in range(rows)]
 
     def bfs():
+        """
+        Breadth-First Search (BFS) to find all reachable cells from the edges.
+        If any cell is not accessible, it means that an attempt is being made to create an isolated island
+        """
         queue = []
     
         for i in range(rows):
