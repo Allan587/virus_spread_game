@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 import sys
 import random
 from collections import deque
+import user_management as user_mng
 
 app = QApplication(sys.argv)
 ventana = QWidget()
@@ -31,22 +32,6 @@ def messages(i: int) -> None:
     msg.setText(text)
     msg.setIcon(icon)
     msg.exec()
-
-def generate_virus(x:int = None, y:int = None, level:int = 1)->None: 
-    """
-    Function that generates a virus in the matrix.
-
-    Args:
-        x (int): coordinate x of the button
-        y (int): coordinate y of the button
-    """
-    cont = 0
-    while cont < level: 
-        origin_x = random.randint(0, x-1)
-        origin_y = random.randint(0, y-1)
-        matriz_botones[origin_y][origin_x].setText("🦠")
-        matriz_botones[origin_y][origin_x].valor = 1
-        cont += 1
 
 def can_virus_spread(x: int, y: int) -> bool:
     """
@@ -117,20 +102,6 @@ def spread_virus(x: int, y: int) -> None:
         if 0 <= ny < y and 0 <= nx < x and matriz_botones[ny][nx].valor == 0:
             add_virus(nx, ny)
             return
-    
-def generate_barrier(x:int, y:int)->None:
-    """
-    Function that generates a barrier in the matrix clicked by the user.
-
-    Args:
-        x (int): coordinate x of the button
-        y (int): coordinate y of the button
-    """
-    if not limit_islands(matriz_botones, x, y):
-        return
-    matriz_botones[y][x].setText("🧱")
-    matriz_botones[y][x].valor = 2
- 
 
 def limit_islands(m:list, x:int, y:int)->bool:
     """
@@ -186,6 +157,30 @@ def limit_islands(m:list, x:int, y:int)->bool:
     m[y][x].valor = 0
     return True
 
+def winner()->None:
+    """
+    Function that checks if the user has won the game.
+    If there are no empty spaces left in the matrix, the user wins.
+    """
+    for row in matriz_botones:
+        for boton in row:
+            if boton.valor == 0:  
+                return True
+    return False
+
+def generate_barrier(x:int, y:int)->None:
+    """
+    Function that generates a barrier in the matrix clicked by the user.
+
+    Args:
+        x (int): coordinate x of the button
+        y (int): coordinate y of the button
+    """
+    if not limit_islands(matriz_botones, x, y):
+        return
+    matriz_botones[y][x].setText("🧱")
+    matriz_botones[y][x].valor = 2
+
 def turn(x: int, y: int) -> None:
     """
     Function that alternates turns between the user and the computer.
@@ -199,16 +194,21 @@ def turn(x: int, y: int) -> None:
         generate_barrier(x, y)  
         spread_virus(len(matriz_botones[0]), len(matriz_botones))
 
-def winner()->None:
+def generate_virus(x:int = None, y:int = None, level:int = 1)->None: 
     """
-    Function that checks if the user has won the game.
-    If there are no empty spaces left in the matrix, the user wins.
+    Function that generates a virus in the matrix.
+
+    Args:
+        x (int): coordinate x of the button
+        y (int): coordinate y of the button
     """
-    for row in matriz_botones:
-        for boton in row:
-            if boton.valor == 0:  
-                return True
-    return False
+    cont = 0
+    while cont < level: 
+        origin_x = random.randint(0, x-1)
+        origin_y = random.randint(0, y-1)
+        matriz_botones[origin_y][origin_x].setText("🦠")
+        matriz_botones[origin_y][origin_x].valor = 1
+        cont += 1
 
 def game_matrix(x:int = None, y:int= None, level:int = 1)->None:
     """
@@ -233,8 +233,9 @@ def game_matrix(x:int = None, y:int= None, level:int = 1)->None:
         matriz_botones.append(fila)
     generate_virus(x, y, level)
 
-game_matrix(10, 10)
-
 ventana.setLayout(grid_layout) 
 ventana.show()
 sys.exit(app.exec())
+
+if __name__ == "__main__":
+    game_matrix(10, 10, 1) 
