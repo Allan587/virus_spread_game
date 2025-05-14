@@ -1,10 +1,8 @@
 import json
 import os
-from PyQt6.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit, QPushButton,
-                             QVBoxLayout, QMessageBox)
+from PyQt6.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit, QPushButton,QVBoxLayout, QMessageBox, QGridLayout)
 from PyQt6.QtCore import Qt
 from hashlib import sha256
-import virus_spread_game as game
 
 USERS_FILE = "usuarios.json"
 
@@ -117,37 +115,30 @@ class DifficultyWindow(QWidget):
         self.parent_menu = parent_menu
         self.setWindowTitle("Seleccionar Dificultad")
         self.setGeometry(100, 100, 300, 200)
-        self.setup_ui()
+        self.setup_ui()    
 
+    def start_game(self, val:int):
+        if val == 4:
+            self.close()
+            self.parent_menu.show()
+            return
+        from virus_spread_game import GameWindow
+        self.close()
+        self.game_window = GameWindow(val)
+        
+        
     def setup_ui(self):
-        layout = QVBoxLayout()
+        grid_layout = QGridLayout()
+        self.matriz_botones = []
 
-        easy_btn = QPushButton("Fácil")
-        medium_btn = QPushButton("Medio")
-        hard_btn = QPushButton("Difícil")
-        back_btn = QPushButton("Volver")
+        textos = ["Fácil", "Medio", "Difícil", "Volver"]
 
-        easy_btn.clicked.connect(lambda: self.start_game("facil"))
-        medium_btn.clicked.connect(lambda: self.start_game("medio"))
-        hard_btn.clicked.connect(lambda: self.start_game("dificil"))
-        back_btn.clicked.connect(self.go_back)
-
-        layout.addWidget(easy_btn)
-        layout.addWidget(medium_btn)
-        layout.addWidget(hard_btn)
-        layout.addWidget(back_btn)
-
-        self.setLayout(layout)
-
-    def start_game(self, dificultad):
-        self.close()
-        game.matriz_botones.clear()
-        game.iniciar_juego()
-        game.definir_dificultad(dificultad)
-
-    def go_back(self):
-        self.close()
-        self.parent_menu.show()
+        for i, texto in enumerate(textos):
+            boton = QPushButton(texto)
+            boton.clicked.connect(lambda _, val=i + 1: self.start_game(val))
+            grid_layout.addWidget(boton, i, 0)
+            self.matriz_botones.append(boton)
+        self.setLayout(grid_layout)
 
 # ---------------- Inicio del programa ---------------- #
 if __name__ == "__main__":
@@ -155,15 +146,3 @@ if __name__ == "__main__":
     login_window = LoginWindow()
     login_window.show()
     app.exec()
-
-
-def selected_mode(x:int=None, y:int=None)->None:
-    matrix_modes = [] #Se define con los botones, lo botones estaran contenidos en matrix_modes
-
-    modes= []
-
-    if 0 == y and 0 == x: #Modo facil
-        import virus_spread_game as game
-        level = 1
-]
-        game.game_matrix()
