@@ -1,5 +1,4 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
-                             QApplication, QDialog, QListWidget, QHBoxLayout, QInputDialog)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox,QApplication, QDialog, QListWidget, QHBoxLayout, QInputDialog)
 from PyQt6.QtCore import Qt
 import hashlib
 import pickle
@@ -10,7 +9,17 @@ import save_manager
 USUARIOS_FILE = "usuarios.pkl"
 
 class LoadGameDialog(QDialog):
+    """A class that allows to continue and delete a saved game
+
+    Args:
+        QDialog (object): Allows creating personalized dialogs
+    """
     def __init__(self, usuario):
+        """Initialize the class with an argument 'usuario'
+
+        Args:
+            usuario (str): user's name
+        """
         super().__init__()
         self.usuario = usuario
         self.setWindowTitle("Cargar Partida")
@@ -36,6 +45,7 @@ class LoadGameDialog(QDialog):
         self.setLayout(layout)
 
     def cargar(self):
+        """Continues a saved game select by the user"""
         seleccion = self.lista.currentItem()
         if seleccion:
             nombre = seleccion.text()
@@ -46,6 +56,7 @@ class LoadGameDialog(QDialog):
             self.game.current_user = self.usuario
 
     def eliminar(self):
+        """Allows the user to delete a selected game"""
         seleccion = self.lista.currentItem()
         if seleccion:
             nombre = seleccion.text()
@@ -65,6 +76,11 @@ class LoadGameDialog(QDialog):
                 else:
                     QMessageBox.warning(self, "Eliminar Partida", "No se pudo eliminar la partida.")
 class LoginWindow(QWidget):
+    """A class that initializes or displays a window to log into the game
+
+    Args:
+        QWidget (library): Allows the addition of widgets for better control of the window
+    """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Login")
@@ -94,19 +110,38 @@ class LoginWindow(QWidget):
         self.setLayout(layout)
 
     def hash_pass(self, text):
+        """This function encrypts the user's password
+
+        Args:
+            text (str): The user's password
+
+        Returns:
+            encrypt str : returns an encrypted password
+        """
         return hashlib.sha256(text.encode()).hexdigest()
 
     def load_users(self):
+        """A function that checks if the user was created previously
+
+        Returns:
+            str : if the user was create it returns the user's name, otherwize nothing is returned
+        """
         if os.path.exists(USUARIOS_FILE):
             with open(USUARIOS_FILE, 'rb') as f:
                 return pickle.load(f)
         return {}
 
     def save_users(self, users):
+        """This function is responsible for creating new users.
+
+        Args:
+            users (str): new user 
+        """
         with open(USUARIOS_FILE, 'wb') as f:
             pickle.dump(users, f)
 
     def login(self):
+        """This function is responsible to checks if the user was create and checks if the password its correct depending on the user"""
         user = self.usuario_input.text()
         pwd = self.pass_input.text()
         users = self.load_users()
@@ -119,6 +154,7 @@ class LoginWindow(QWidget):
             QMessageBox.warning(self, "Error", "Usuario o contraseña incorrectos")
 
     def register(self):
+        """This function is responsible for checking if there is another user with the same username and preventing it"""
         user = self.usuario_input.text()
         pwd = self.pass_input.text()
         users = self.load_users()
@@ -132,14 +168,20 @@ class LoginWindow(QWidget):
         QMessageBox.information(self, "Registro", "Usuario registrado exitosamente")
 
 class MenuWindow(QWidget):
+    """This class displays the main window that contains some functions like 'play', 'load game' and 'logout'
+
+    Args:
+        QWidget (library): allows to adding widget for better control of the window
+    """
     def __init__(self, usuario):
         super().__init__()
         self.usuario = usuario
+        self.current_user = usuario
         self.setWindowTitle("Menú Principal")
         self.setFixedSize(300, 200)
         layout = QVBoxLayout()
 
-        self.label = QLabel(f"Bienvenido, {usuario}")
+        self.label = QLabel(f"Bienvenido {usuario}")
 
         self.jugar_btn = QPushButton("Jugar")
         self.cargar_btn = QPushButton("Cargar Partida")
@@ -157,6 +199,7 @@ class MenuWindow(QWidget):
         self.setLayout(layout)
 
     def jugar(self):
+        """Function responsible to display a window with the difficulty of the levels"""
         niveles = ["Fácil", "Medio", "Difícil"]
         nivel, ok = QInputDialog.getItem(self, "Seleccionar Dificultad", "Elige un nivel:", niveles, 0, False)
         if ok and nivel:
@@ -167,10 +210,12 @@ class MenuWindow(QWidget):
             self.close()
 
     def cargar_partida(self):
+        """Continue a saved game"""
         self.dialog = LoadGameDialog(self.usuario)
         self.dialog.exec()
 
     def logout(self):
+        """Function to log out from the main window"""
         self.login_window = LoginWindow()
         self.login_window.show()
         self.close()
