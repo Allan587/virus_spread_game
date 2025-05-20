@@ -1,6 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QGridLayout, QMessageBox
-from PyQt6.QtGui import QGuiApplication
+from PyQt6.QtWidgets import QWidget, QPushButton, QGridLayout, QMessageBox, QInputDialog
+from PyQt6.QtGui import QGuiApplication, QCloseEvent
 import random
+import save_manager
 
 game_modes = {
     1: {"matrix": 10, "virus_spread": 1, "bot_moves": 1},
@@ -9,19 +10,59 @@ game_modes = {
 }
 
 class GameWindow(QWidget):
-    def __init__(self, level):
+    def __init__(self, level,saved_state=None):
         super().__init__()
         self.level = level
         self.matriz_botones = []
         self.grid_layout = QGridLayout()
         self.setLayout(self.grid_layout)
+        self.current_user = None
 
         self.setWindowTitle("Virus Spread Game")
         self.resize(500, 300)
         self.move(QGuiApplication.primaryScreen().availableGeometry().center() - self.rect().center())
 
-        self.setup_game()
+        if saved_state:
+            self.load_game_state(saved_state)  # CAMBIO: Cargar estado guardado si existe
+        else:
+            self.setup_game()
         self.show()
+    
+    def save_game_prompt(self):
+        if not hasattr(self, 'current_user'):
+            self.messages(2)
+            return
+        slot, ok = QInputDialog.getText(self, "Guardar Partida", "Nombre para esta partida:")
+        if ok and slot:
+            state = self.get_game_state()
+            success, msg = save_manager.save_game(self.current_user, slot, state)
+            QMessageBox.information(self, "Guardar Partida", msg)
+
+    def closeEvent(self, event: QCloseEvent):
+        if not self.current_user:
+            event.accept()
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Guardar partida",
+            "¿Deseas guardar la partida antes de salir?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            slot, ok = QInputDialog.getText(self, "Guardar Partida", "Nombre para esta partida:")
+            if ok and slot:
+                state = self.get_game_state()
+                success, msg = save_manager.save_game(self.current_user, slot, state)
+                QMessageBox.information(self, "Guardar Partida", msg)
+                event.accept()
+            else:
+                event.ignore()
+        elif reply == QMessageBox.StandardButton.No:
+            event.accept()
+        else:
+            event.ignore()
 
     def messages(self, i: int):
         msg_data = {
@@ -159,6 +200,34 @@ class GameWindow(QWidget):
                 self.matriz_botones[oy][ox].valor = 1
                 count += 1
                 
+    def get_game_state(self):
+        state = {
+            'level': self.level,
+            'matrix': [[btn.valor for btn in row] for row in self.matriz_botones]
+        }
+        return state
+    def load_game_state(self, saved_state):
+        matrix = saved_state['matrix']
+        size = len(matrix)
+        for y in range(size):
+            fila = []
+            for x in range(size):
+                boton = QPushButton()
+                valor = matrix[y][x]
+                boton.valor = valor
+                if valor == 0:
+                    boton.setText("⬜")
+                elif valor == 1:
+                    boton.setText("🦠")
+                elif valor == 2:
+                    boton.setText("🧱")
+                boton.setFixedSize(50, 50)
+                boton.setStyleSheet("font-size: 40px; border: none; background-color: transparent;")
+                boton.clicked.connect(lambda _, px=x, py=y: self.turn(px, py))
+                self.grid_layout.addWidget(boton, x, y)
+                fila.append(boton)
+            self.matriz_botones.append(fila)
+
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
     import sys
