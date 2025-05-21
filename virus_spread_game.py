@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QGridLayout, QMessageBox, QInputDialog
+from PyQt6.QtWidgets import QWidget, QPushButton, QGridLayout, QMessageBox, QInputDialog 
 from PyQt6.QtGui import QGuiApplication, QCloseEvent
 import random
 import save_manager
@@ -26,6 +26,7 @@ class GameWindow(QWidget):
         self.grid_layout = QGridLayout()
         self.setLayout(self.grid_layout)
         self.current_user = None
+        self.skip_close_event = False
 
         self.setWindowTitle("Virus Spread Game")
         self.resize(500, 300)
@@ -36,6 +37,16 @@ class GameWindow(QWidget):
         else:
             self.setup_game()
         self.show()
+        
+    def clear_layout(self):
+        """Elimina todos los widgets del layout actual"""
+        layout = self.layout()
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.setParent(None)
     
     def save_game_prompt(self):
         """Funtion that allows the user to save their games"""
@@ -53,10 +64,14 @@ class GameWindow(QWidget):
         Args:
             event (QCloseEvent): Displays a window with the opportunity to save the game
         """
+        if getattr(self, 'skip_close_event', False):
+            event.accept()
+            return
+        
         if not self.current_user:
             event.accept()
             return
-
+        
         reply = QMessageBox.question(
             self,
             "Guardar partida",
@@ -99,6 +114,8 @@ class GameWindow(QWidget):
     def setup_game(self):
         """Function that initializes the game"""
         self.messages(3)
+        self.clear_layout()
+        self.matriz_botones = []
         size = game_modes[self.level]["matrix"]
         for y in range(size):
             fila = []
@@ -107,7 +124,7 @@ class GameWindow(QWidget):
                 boton.valor = 0
                 boton.setFixedSize(50, 50)
                 boton.setStyleSheet("font-size: 40px; border: none; background-color: transparent;")
-                boton.clicked.connect(lambda _, px=x, py=y: self.turn(px, py))
+                boton.clicked.connect(lambda _, px=x, py=y: self.turn(px, py, self.level))
                 self.grid_layout.addWidget(boton, x, y)
                 fila.append(boton)
             self.matriz_botones.append(fila)
@@ -124,36 +141,82 @@ class GameWindow(QWidget):
                     return True
         return False
     
-    def action_control_level(m:str, v:int)->None:
-        return
-        
     
-    def control_level(self, level:int=None):
-        from PyQt6.QtWidgets import QWidget
+    def action_control_level(self, m: str, v: int, level: int) -> None:
+        if v == 0:  
+            if level == 3:
+                reply = QMessageBox.question(
+                    self,
+                    "¡Felicidades!",
+                    "¡Has completado el último nivel!\n¿Deseas empezar desde el nivel 1?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    self.level = 1
+                    self.setup_game()
+            else:
+                self.level = level + 1
+                self.setup_game()
+
+        elif v == 1:
+            self.skip_close_event = True
+            from user_management import MenuWindow
+            self.menu = MenuWindow(self.current_user)
+            self.menu.show()
+            self.close()
+
+        elif v == 2: 
+            self.level = level
+            self.setup_game()
+        
+    def control_level(self, level: int = None, mostrar_mensaje: bool = True, mostrar_botones: bool = True):
+        """Displays a window that asks the user if they want to continue to the next level or retry
+
+        Args:
+            level (int, optional): Number indexed to the level. Defaults to None.
+            mostrar_mensaje (bool): Whether to show the win/lose message. Defaults to True.
+            mostrar_botones (bool): Whether to show action buttons. Defaults to True.
+        """
+        for i in reversed(range(self.layout().count())):
+            widget = self.layout().itemAt(i).widget()
+            if widget is not None:
+                widget.setParent(None)
 
         contenedor = QWidget(self)
         layout = QGridLayout()
         contenedor.setLayout(layout)
         self.layout().addWidget(contenedor)
-
         gano = self.winner()
-        QMessageBox.information(self, "Resultado", "¡Ganaste!" if gano else "Perdiste")
+        
+        if mostrar_mensaje:
+            QMessageBox.information(self, "Resultado", "¡Ganaste!" if gano else "Perdiste")
+        if mostrar_botones:
+            if gano:
+                acciones = [
+                    ("Continuar", "¡Siguiente nivel!", 0),
+                    ("Salir", "Hasta luego", 1)
+                ]
+            else:
+                acciones = [
+                    ("Intentar de nuevo", "Inténtalo otra vez", 2),
+                    ("Salir", "Hasta luego", 1)
+                ]
 
-        acciones = [
-            ("Continuar", "¡Siguiente nivel!", 0),
-            ("Salir", "Hasta luego", 1)
-        ] if gano else [
-            ("Intentar de nuevo", "Inténtalo otra vez", 0),
-            ("Salir", "Hasta luego", 1)
-        ]
+            for i, (texto, mensaje, valor) in enumerate(acciones):
+                boton = QPushButton(texto)
+                boton.setProperty("valor", valor)
+                boton.clicked.connect(lambda _, m=mensaje, v=valor: self.action_control_level(m, v, level))
+                layout.addWidget(boton, 0, i)
 
-        for i, (texto, mensaje, valor) in enumerate(acciones):
-            boton = QPushButton(texto)
-            boton.setProperty("valor", valor) 
-            boton.clicked.connect(lambda _, m=mensaje, v=valor: self.mostrar_mensaje(m, v))
-            layout.addWidget(boton, 0, i)
+    def can_virus_spread(self, level:int):
+        """this function it is used to checks if the virus can spread
 
-    def can_virus_spread(self):
+        Args:
+            level (int): Contains the number indexed to the current level
+
+        Returns:
+            bool: returns 'True' if virus can spread, otherwize returns 'False'
+        """
         rows = len(self.matriz_botones)
         cols = len(self.matriz_botones[0]) if rows > 0 else 0
 
@@ -172,10 +235,10 @@ class GameWindow(QWidget):
         for row in self.matriz_botones:
             for boton in row:
                 boton.setEnabled(False)
-        self.control_level()
+        self.control_level(level)
         return False
 
-    def spread_virus(self):
+    def spread_virus(self, level:int):
         """Virus spread function. This function use the function "can_virus_spread" to verify the possibilities"""
         size = len(self.matriz_botones)
         virus = game_modes[self.level]["bot_moves"]
@@ -183,7 +246,7 @@ class GameWindow(QWidget):
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         while spread_count < virus:
-            if not self.can_virus_spread():
+            if not self.can_virus_spread(level):
                 break
             ox, oy = random.randint(0, size - 1), random.randint(0, size - 1)
             if self.matriz_botones[oy][ox].valor != 1:
@@ -257,7 +320,7 @@ class GameWindow(QWidget):
         self.matriz_botones[y][x].setText("🧱")
         self.matriz_botones[y][x].valor = 2
 
-    def turn(self, x:int, y:int):
+    def turn(self, x:int, y:int, level:int):
         """Take turns between the user and the bot
 
         Args:
@@ -266,7 +329,7 @@ class GameWindow(QWidget):
         """
         if self.matriz_botones[y][x].valor == 0:
             self.generate_barrier(x, y)
-            self.spread_virus()
+            self.spread_virus(level)
 
     def generate_virus(self, x, y):
         """Create the intial virus in the matrix
@@ -297,6 +360,7 @@ class GameWindow(QWidget):
         return state
     def load_game_state(self, saved_state):
         """Inicializa una ventana con la partida guardada"""
+        self.clear_layout()
         self.matriz_botones.clear()
         while self.grid_layout.count():
             child = self.grid_layout.takeAt(0)
@@ -321,7 +385,7 @@ class GameWindow(QWidget):
                     boton.setText("🧱")
                 boton.setFixedSize(50, 50)
                 boton.setStyleSheet("font-size: 40px; border: none; background-color: transparent;")
-                boton.clicked.connect(lambda _, px=x, py=y: self.turn(px, py))
+                boton.clicked.connect(lambda _, px=x, py=y: self.turn(px, py, self.level))
                 self.grid_layout.addWidget(boton, y, x) 
                 fila.append(boton)
             self.matriz_botones.append(fila)
