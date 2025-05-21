@@ -69,7 +69,6 @@ class LoadGameDialog(QDialog):
             if respuesta == QMessageBox.StandardButton.Yes:
                 exito = save_manager.delete_game(self.usuario, nombre)
                 if exito:
-                    # Eliminar el elemento de la lista visual
                     fila = self.lista.row(seleccion)
                     self.lista.takeItem(fila)
                     QMessageBox.information(self, "Eliminar Partida", "Partida eliminada correctamente.")
@@ -213,6 +212,7 @@ class MenuWindow(QWidget):
         """Continue a saved game"""
         self.dialog = LoadGameDialog(self.usuario)
         self.dialog.exec()
+        self.close()
 
     def logout(self):
         """Function to log out from the main window"""
